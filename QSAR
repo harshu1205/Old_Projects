@@ -1,0 +1,125 @@
+local database = {}
+
+--Example of spa7
+------------------------------EDIT--------------------------------------
+local DescriptorTable = "ELECTRONICENERGY COSMOVOLUME	MOLECULARWEIGHT	ELECTRONELECTRON ETOT"
+--Descriptors only in a list
+
+local Formula = "0.0002 (± 0.0002) ELECTRONICENERGY - 0.0336 (± 0.0207) COSMOVOLUME + 0.0150 (± 0.0063) MOLECULARWEIGHT - 0.0289 (± 0.0138) ELECTRONELECTRON - 0.0209 (± 0.0095) ETOT - 1.9407 (± 0.8889)"
+--Full formula make sure variables are the same as descriptors
+
+local Calculation = "-1.64	-11008.8247	176.94	167.1208	1508.0329	-2450.3436 -1.09	-10670.52861	176.71	167.1208	1511.6718	-2450.607 -0.86	-10591.17471	177.19	167.1208	1511.653	-2450.5949 -0.72	-10910.79517	180.93	166.136	1437.8555	-2350.5499 -0.16	-17849.25909	211.42	229.1056	2294.1997	-3662.9821 0	-14844.93301	249	295.3365	2142.0945	-3480.8857 2.05	-9779.73486	172.02	173.5555	1453.8232	-2361.9058 1.73	-9671.94669	170.96	153.1372	1305.2499	-2157.6603 1.42	-8161.69381	151.63	139.1104	1223.7368	-2001.6925 0.27	-12893.62309	183.81	184.108	1756.0114	-2832.2384 0.46	-13090.35538	181.06	184.108	1757.6265	-2832.2619 0.63	-11251.05776	195.78	208.0006	1678.9768	-2721.5998 1.08	-8641.93502	164.44	148.1208	1196.4482	-2001.4684 1.64	-11254.14794	192.47	187.5823	1535.8676	-2517.7659 1.98	-12548.49383	193.24	202.5537	1773.7702	-2871.6894 2.31	-12455.6923	199.49	247.0047	1768.787	-2851.0705 2.42	-14571.66923	218.38	236.9988	1997.8499	-3231.5085 0.52	-5967.40698	145.83	119.1226	872.5256	-1491.3445"
+--Name, Tox, Descriptors list in same order as DescriptorTable
+------------------------------EDIT--------------------------------------
+
+----------------------------FUNCTIONS-----------------------------------
+local function mysplit(inputstr, sep)
+    if sep == nil then
+        sep = "%s"
+    end
+    
+    local t={}
+    
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, str)
+    end
+    
+    return t
+end
+local function makeDescriptorList(list)
+    local splitTable = mysplit(list)
+    DescriptorTable = splitTable
+end
+local function formulate(eq)
+    local equation = eq
+
+    repeat
+        local matchs = string.match(equation, "%b()")
+        
+        if matchs ~= nil then
+            equation = string.gsub(equation, matchs, "*")
+            equation = string.gsub(equation, "%(", "", 1)
+            equation = string.gsub(equation, "%)", "", 1)
+        end
+    until matchs == nil
+    
+    equation = string.gsub(equation, "*$", "", 1)
+
+    return equation
+end
+local function reformat(tab, repeats, count)
+    local tabl = tab
+    
+    for i = 1, repeats do
+        local temp = {}
+        for k = 1, count do
+            table.insert(temp, tabl[k])
+        end
+        for k = 1, count do
+            table.remove(tabl, 1)
+        end
+        table.insert(tabl, temp)
+    end
+    
+    return tabl
+end
+local function Compose(formula, index)
+    local equation = formula
+
+    for i = 1, #DescriptorTable do
+        equation = string.gsub(equation, DescriptorTable[i], database[index]["Descriptors"][DescriptorTable[i]], 1)
+    end
+    
+    local result = assert(loadstring("return "..equation))()
+
+    return result
+end
+local function Calculate(list)
+    local splitTable = mysplit(list)
+    local repeats = #splitTable / (#DescriptorTable + 1)
+    local toxtable = {}
+    local desclists = {}
+    
+    for i = 1, #splitTable do
+        table.insert(desclists, tonumber(splitTable[i]))
+    end
+    
+    for i = 1, repeats do
+        toxtable[i] = tonumber(splitTable[(6*i)-#DescriptorTable])
+        table.remove(desclists, ((6*i)-#DescriptorTable)-(i-1))
+    end
+    
+    desclists = reformat(desclists, repeats, #DescriptorTable)
+    
+    for i = 1, repeats do
+        database[i] = {}
+        database[i]["Toxicity"] = toxtable[i]
+        database[i]["Descriptors"] = desclists[i]
+    end
+    
+    for i = 1, repeats do
+        for k = 1, #DescriptorTable do
+            database[i]["Descriptors"][DescriptorTable[k]] = desclists[i][k]
+        end
+    end
+    
+    local formula = formulate(Formula)
+    local results = {}
+    
+    for i = 1, repeats do
+        table.insert(results, Compose(formula, i))
+    end
+    
+    print ("Number  Actual   Predicted  Residue Percent")
+
+    for i = 1, repeats do
+        print(i.."  "..toxtable[i].."  "..results[i].."  "..results[i]-toxtable[i].."  "..((results[i]/toxtable[i])-1)*100)
+    end
+end
+
+----------------------------FUNCTIONS------------------------------------
+
+makeDescriptorList(DescriptorTable)
+
+----------------------------PROCESSING-----------------------------------
+Calculate(Calculation)
