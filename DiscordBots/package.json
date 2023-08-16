@@ -1,0 +1,10 @@
+{
+"name": "MyBot",
+"version": "1.0.0",
+"description": "GG disc bot",
+"main": "MyBot.js",
+"author": "Harshu",
+"dependencies": {
+    "discord.js": "^12.1.1"
+    }
+}
